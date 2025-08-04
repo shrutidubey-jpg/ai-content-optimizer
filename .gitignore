@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env
+instance/
+.webassets-cache
+.DS_Store
+uploads/
+outputs/
+diagnosis_log.txt
+test_error.txt
