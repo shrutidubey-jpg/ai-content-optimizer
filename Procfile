@@ -1,1 +1,1 @@
-web: gunicorn app_with_ai:app
+web: gunicorn simple_web_app:app
