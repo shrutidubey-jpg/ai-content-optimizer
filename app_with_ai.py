@@ -16,11 +16,11 @@ import uuid
 try:
     from enhanced_optimizer_with_ai import EnhancedOptimizerWithAI
     AI_AVAILABLE = True
-    print("✅ AI Grammar Agent loaded successfully!")
+    print("[OK] AI Grammar Agent loaded successfully!")
 except ImportError:
     from enhanced_optimizer import EnhancedContentOptimizer as EnhancedOptimizerWithAI
     AI_AVAILABLE = False
-    print("⚠️ AI Grammar Agent not available, using standard optimizer")
+    print("[WARNING] AI Grammar Agent not available, using standard optimizer")
 
 app = Flask(__name__)
 CORS(app)
@@ -181,7 +181,7 @@ def index():
             <h1>🤖 AI Content SEO Optimizer</h1>
             <p>Professional content optimization with AI grammar correction</p>
             <div class="alert">
-                ✨ AI Grammar Agent: ''' + ('✅ ACTIVE' if ''' + str(AI_AVAILABLE).lower() + ''' else '❌ OFFLINE') + '''
+                AI Grammar Agent: ''' + ('[ACTIVE]' if AI_AVAILABLE else '[OFFLINE]') + '''
             </div>
         </div>
         
@@ -336,7 +336,7 @@ def analyze_content():
         if isinstance(keywords, str):
             keywords = [k.strip() for k in keywords.split(',') if k.strip()]
         
-        print(f"🔍 Analyzing content with AI Grammar Agent...")
+        print(f"Analyzing content with AI Grammar Agent...")
         print(f"   Content length: {len(content)} characters")
         print(f"   Keywords: {keywords}")
         print(f"   Context: {writing_context}")
@@ -379,16 +379,16 @@ def analyze_content():
             'timestamp': datetime.now().isoformat()
         }
         
-        print(f"✅ Analysis completed!")
-        print(f"   SEO Score: {result['original_analysis']['seo_score']:.1f} → {result['optimized_analysis']['seo_score']:.1f}")
+        print(f"[OK] Analysis completed!")
+        print(f"   SEO Score: {result['original_analysis']['seo_score']:.1f} -> {result['optimized_analysis']['seo_score']:.1f}")
         if AI_AVAILABLE:
-            print(f"   Grammar Score: {result['original_analysis'].get('grammar_score', 0):.1f} → {result['optimized_analysis'].get('grammar_score', 0):.1f}")
+            print(f"   Grammar Score: {result['original_analysis'].get('grammar_score', 0):.1f} -> {result['optimized_analysis'].get('grammar_score', 0):.1f}")
             print(f"   AI Issues Fixed: {result.get('ai_enhancements', {}).get('issues_fixed', 0)}")
         
         return jsonify(response_data)
         
     except Exception as e:
-        print(f"❌ Analysis error: {e}")
+        print(f"[ERROR] Analysis error: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
@@ -502,21 +502,21 @@ def health_check():
     })
 
 if __name__ == '__main__':
-    print("🚀 STARTING ENHANCED CONTENT SEO OPTIMIZER WITH AI")
+    print("STARTING ENHANCED CONTENT SEO OPTIMIZER WITH AI")
     print("=" * 60)
-    print("🤖 AI Grammar Agent: " + ("✅ ENABLED" if AI_AVAILABLE else "❌ DISABLED"))
-    print("📊 Features loaded:")
-    print("  ✅ Advanced grammar correction with confidence scoring")
-    print("  ✅ Context-aware writing analysis (business, academic, general)")
-    print("  ✅ Intelligent keyword optimization")
-    print("  ✅ Real-time content enhancement")
-    print("  ✅ Comprehensive SEO analysis")
-    print("  ✅ File upload/download with AI processing")
-    print("  ✅ RESTful API with AI endpoints")
-    print("\n🌐 Access the enhanced application at: http://localhost:5000")
-    print("🤖 AI Grammar Check endpoint: http://localhost:5000/api/grammar-check")
-    print("📚 API Health Check: http://localhost:5000/api/health")
-    print("\n🛑 Press Ctrl+C to stop the server")
+    print("AI Grammar Agent: " + ("ENABLED" if AI_AVAILABLE else "DISABLED"))
+    print("Features loaded:")
+    print("  [OK] Advanced grammar correction with confidence scoring")
+    print("  [OK] Context-aware writing analysis (business, academic, general)")
+    print("  [OK] Intelligent keyword optimization")
+    print("  [OK] Real-time content enhancement")
+    print("  [OK] Comprehensive SEO analysis")
+    print("  [OK] File upload/download with AI processing")
+    print("  [OK] RESTful API with AI endpoints")
+    print("\nAccess the enhanced application at: http://localhost:5000")
+    print("AI Grammar Check endpoint: http://localhost:5000/api/grammar-check")
+    print("API Health Check: http://localhost:5000/api/health")
+    print("\nPress Ctrl+C to stop the server")
     print("=" * 60)
     
     app.run(debug=True, host='0.0.0.0', port=5000)

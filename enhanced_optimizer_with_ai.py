@@ -1,18 +1,237 @@
 #!/usr/bin/env python3
 """
-Enhanced Content SEO Optimizer with AI Grammar Agent
-Advanced content optimization with intelligent grammar correction
+Enhanced Content SEO Optimizer with Groq AI Integration
+Uses Groq's fast LLM API for grammar correction and content enhancement
 """
 
-import re
+import os
 import json
-from typing import Dict, List, Tuple, Optional
+import re
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
 from collections import Counter
+import time
 import random
-from ai_grammar_agent import AIGrammarAgent, GrammarIssue
+
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
+# Import base optimizer
+try:
+    from enhanced_optimizer import EnhancedContentOptimizer
+except ImportError:
+    from content_optimizer import ContentOptimizer as EnhancedContentOptimizer
+
+# Import Groq client
+try:
+    from groq import Groq
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
+    print("⚠️ Groq library not installed. Run: pip install groq")
+
+@dataclass
+class GrammarCorrection:
+    """Represents a grammar correction suggestion"""
+    original: str
+    corrected: str
+    error_type: str
+    confidence: float
+    explanation: str
+
+class GrammarAIAgent:
+    """AI-powered grammar correction using Groq's fast LLM"""
+    
+    def __init__(self, api_key: Optional[str] = None):
+        """Initialize the Grammar AI Agent with Groq"""
+        self.api_key = api_key or os.getenv('GROQ_API_KEY')
+        self.client = None
+        
+        if not self.api_key:
+            print("[WARNING] No Groq API key found. Set GROQ_API_KEY environment variable.")
+            self.enabled = False
+        elif not GROQ_AVAILABLE:
+            print("[WARNING] Groq library not installed. Run: pip install groq")
+            self.enabled = False
+        else:
+            try:
+                self.client = Groq(api_key=self.api_key)
+                self.enabled = True
+                print("[OK] Groq AI Grammar Agent initialized successfully!")
+            except Exception as e:
+                print(f"[ERROR] Failed to initialize Groq client: {e}")
+                self.enabled = False
+        
+        # Grammar patterns for fallback
+        self.common_errors = {
+            r'\btodays\b': "today's",
+            r'\bits\s+a\b': "it's a",
+            r'\byour\s+welcome\b': "you're welcome",
+            r'\bthere\s+their\b': "their",
+            r'\bthey\'re\s+there\b': "they're",
+            r'\b(\w+)\s+\1\b': r'\1',  # Duplicate words
+            r'\s+,': ',',  # Space before comma
+            r'\s+\.': '.',  # Space before period
+            r'([a-z])\s+([A-Z])': r'\1. \2',  # Missing period between sentences
+        }
+    
+    def analyze_with_ai(self, text: str, context: str = "general") -> Dict[str, Any]:
+        """Use Groq AI to analyze and correct grammar"""
+        if not self.enabled or not self.client:
+            return self._fallback_analysis(text)
+        
+        try:
+            # Prepare the prompt for Groq
+            prompt = f"""You are an expert grammar and writing assistant. Analyze the following text and provide corrections.
+
+Context: {context} writing
+Text: {text}
+
+Provide a JSON response with:
+1. corrected_text: The fully corrected version of the text
+2. corrections: Array of corrections made, each with:
+   - original: The original text
+   - corrected: The corrected text
+   - type: The type of error (grammar, spelling, punctuation, style)
+   - explanation: Brief explanation of the correction
+3. grammar_score: A score from 0-100 indicating grammar quality
+4. summary: A brief summary of the main issues found
+
+Respond ONLY with valid JSON, no additional text."""
+
+            # Call Groq API with Llama model (fast and effective)
+            response = self.client.chat.completions.create(
+                model="llama3-8b-8192",  # Fast, high-quality model
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a professional grammar checker and writing assistant. Always respond with valid JSON only."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.3,  # Low temperature for consistent corrections
+                max_tokens=2048,
+                response_format={"type": "json_object"}
+            )
+            
+            # Parse the response
+            result = json.loads(response.choices[0].message.content)
+            
+            # Ensure all required fields
+            if 'corrected_text' not in result:
+                result['corrected_text'] = text
+            if 'corrections' not in result:
+                result['corrections'] = []
+            if 'grammar_score' not in result:
+                result['grammar_score'] = 85
+            if 'summary' not in result:
+                result['summary'] = "Text analyzed successfully"
+            
+            return result
+            
+        except Exception as e:
+            print(f"[WARNING] Groq API error: {e}")
+            return self._fallback_analysis(text)
+    
+    def _fallback_analysis(self, text: str) -> Dict[str, Any]:
+        """Fallback grammar analysis when AI is not available"""
+        corrected_text = text
+        corrections = []
+        
+        # Apply common error patterns
+        for pattern, replacement in self.common_errors.items():
+            matches = re.finditer(pattern, corrected_text, re.IGNORECASE)
+            for match in matches:
+                original = match.group(0)
+                if pattern == r'\b(\w+)\s+\1\b':  # Duplicate words
+                    corrected = match.group(1)
+                else:
+                    corrected = replacement
+                
+                corrections.append({
+                    "original": original,
+                    "corrected": corrected,
+                    "type": "grammar",
+                    "explanation": "Common grammar pattern detected"
+                })
+                
+                corrected_text = re.sub(pattern, replacement, corrected_text, count=1)
+        
+        # Calculate basic grammar score
+        issues_found = len(corrections)
+        word_count = len(text.split())
+        grammar_score = max(0, 100 - (issues_found * 5))
+        
+        return {
+            "corrected_text": corrected_text,
+            "corrections": corrections,
+            "grammar_score": grammar_score,
+            "summary": f"Found {issues_found} potential issues using pattern matching"
+        }
+    
+    def get_grammar_score(self, text: str, context: str = "general") -> Dict:
+        """Get grammar score for the text"""
+        result = self.analyze_with_ai(text, context)
+        return {
+            'grammar_score': result.get('grammar_score', 85.0),
+            'critical_issues': 0,  # For compatibility
+            'major_issues': len(result.get('corrections', [])),
+            'confidence_avg': 0.9
+        }
+    
+    def analyze_grammar(self, text: str) -> List[Dict]:
+        """Analyze grammar and return issues list"""
+        result = self.analyze_with_ai(text)
+        return result.get('corrections', [])
+    
+    def generate_grammar_report(self, text: str, context: str = "general") -> Dict[str, Any]:
+        """Generate comprehensive grammar report"""
+        analysis = self.analyze_with_ai(text, context)
+        
+        # Calculate improvements
+        original_score = 70  # Estimated original score
+        new_score = analysis.get('grammar_score', 85)
+        issues_fixed = len(analysis.get('corrections', []))
+        
+        report = {
+            'original_text': text,
+            'corrected_text': analysis.get('corrected_text', text),
+            'grammar_score': {
+                'score': new_score,
+                'grade': self._get_grade(new_score)
+            },
+            'issues_found': issues_fixed,
+            'corrections': analysis.get('corrections', [])[:10],  # Top 10 corrections
+            'summary': analysis.get('summary', 'Analysis complete'),
+            'improvement_summary': {
+                'score_improvement': new_score - original_score,
+                'issues_fixed': issues_fixed,
+                'text_quality_boost': max(0, (new_score - original_score) * 0.5)
+            },
+            'ai_powered': self.enabled,
+            'model_used': 'groq/llama3-8b' if self.enabled else 'pattern-matching'
+        }
+        
+        return report
+    
+    def _get_grade(self, score: float) -> str:
+        """Convert score to letter grade"""
+        if score >= 95: return 'A+'
+        elif score >= 90: return 'A'
+        elif score >= 85: return 'B+'
+        elif score >= 80: return 'B'
+        elif score >= 75: return 'C+'
+        elif score >= 70: return 'C'
+        elif score >= 65: return 'D'
+        else: return 'F'
 
 class EnhancedOptimizerWithAI:
     def __init__(self):
+        """Initialize the optimizer with AI capabilities"""
         self.stop_words = {
             'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
             'of', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during',
@@ -23,8 +242,9 @@ class EnhancedOptimizerWithAI:
             'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now'
         }
         
-        # Initialize AI Grammar Agent
-        self.grammar_ai = AIGrammarAgent()
+        # Initialize Groq AI Grammar Agent
+        self.grammar_ai = GrammarAIAgent()
+        print(f"AI Grammar Enhancement: {'ENABLED' if self.grammar_ai.enabled else 'DISABLED'}")
         
         # Keyword integration phrases
         self.keyword_phrases = [
@@ -43,14 +263,14 @@ class EnhancedOptimizerWithAI:
         original_content = content
         
         # Step 1: AI Grammar Analysis and Correction
-        print("🤖 Running AI Grammar Analysis...")
+        print("Running AI Grammar Analysis...")
         grammar_report = self.grammar_ai.generate_grammar_report(content, writing_context)
         
         # Step 2: Apply grammar corrections
         content_after_grammar = grammar_report['corrected_text']
         
         # Step 3: Perform SEO and keyword optimization
-        print("🎯 Performing SEO and keyword optimization...")
+        print("Performing SEO and keyword optimization...")
         seo_optimized = self.apply_seo_optimizations(content_after_grammar, target_keywords)
         
         # Step 4: Final analysis
@@ -520,42 +740,42 @@ def test_enhanced_optimizer():
     
     target_keywords = ["digital marketing", "SEO optimization", "business growth"]
     
-    print("🚀 TESTING ENHANCED OPTIMIZER WITH AI GRAMMAR AGENT")
+    print("TESTING ENHANCED OPTIMIZER WITH AI GRAMMAR AGENT")
     print("=" * 60)
     
     result = optimizer.optimize_content(sample_content, target_keywords, 'business_writing')
     
-    print("📊 ORIGINAL ANALYSIS:")
+    print("ORIGINAL ANALYSIS:")
     orig = result['original_analysis']
     print(f"  SEO Score: {orig['seo_score']:.1f}/100")
     print(f"  Grammar Score: {orig['grammar_score']:.1f}/100")
     print(f"  Readability: {orig['readability_score']:.1f}/100")
     print(f"  Word Count: {orig['word_count']}")
     
-    print("\n✨ OPTIMIZED ANALYSIS:")
+    print("\nOPTIMIZED ANALYSIS:")
     opt = result['optimized_analysis']
     print(f"  SEO Score: {opt['seo_score']:.1f}/100")
     print(f"  Grammar Score: {opt['grammar_score']:.1f}/100")
     print(f"  Readability: {opt['readability_score']:.1f}/100")
     print(f"  Word Count: {opt['word_count']}")
     
-    print("\n🤖 AI GRAMMAR ENHANCEMENTS:")
+    print("\nAI GRAMMAR ENHANCEMENTS:")
     ai_enhancements = result['ai_enhancements']
     print(f"  Issues Fixed: {ai_enhancements['issues_fixed']}")
     print(f"  Quality Boost: {ai_enhancements['text_quality_boost']:.1f}%")
     
-    print("\n📈 COMPREHENSIVE IMPROVEMENTS:")
+    print("\nCOMPREHENSIVE IMPROVEMENTS:")
     imp = result['improvements']
     print(f"  SEO Score: +{imp['seo_score_improvement']:.1f}")
     print(f"  Grammar Score: +{imp['grammar_score_improvement']:.1f}")
     print(f"  Readability: +{imp['readability_improvement']:.1f}")
     print(f"  Overall Improvement: +{imp['overall_improvement_score']:.1f}%")
     
-    print("\n🎯 KEYWORD OPTIMIZATION:")
+    print("\nKEYWORD OPTIMIZATION:")
     for keyword, data in imp['keyword_density_optimized'].items():
-        print(f"  {keyword}: {data['original']:.2f}% → {data['optimized']:.2f}% ({data['change']:+.2f}%)")
+        print(f"  {keyword}: {data['original']:.2f}% -> {data['optimized']:.2f}% ({data['change']:+.2f}%)")
     
-    print("\n✨ OPTIMIZED CONTENT:")
+    print("\nOPTIMIZED CONTENT:")
     print("-" * 40)
     print(result['optimized_content'])
     
