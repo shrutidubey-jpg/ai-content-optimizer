@@ -1,16 +1,83 @@
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.venv/
+# Environment variables and API keys
 .env
+.env.local
+.env.production
+.env.staging
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flask
 instance/
 .webassets-cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows system files  
+NTUSER.DAT*
+ntuser.dat*
+ntuser.ini
+AppData/
+Contacts/
+Cookies/
+Desktop.ini
+Favorites/
+Links/
+Music/
+OneDrive/
+Pictures/
+PrintHood/
+Recent/
+SendTo/
+Templates/
+Tracing/
+Videos/
+IntelGraphicsProfiles/
+
+# Claude configuration
+.claude/
+.claude.json*
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.backup
+
+# Upload/Output directories
 uploads/
 outputs/
-diagnosis_log.txt
-test_error.txt
